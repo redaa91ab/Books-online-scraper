@@ -37,25 +37,60 @@ def get_data_book(url) :
     image_url_div = soup.find('div', attrs = {'class' : "item active"})
     image_url_relative = image_url_div.find("img")["src"]
     image_url = urljoin("https://books.toscrape.com/",image_url_relative)
+    
 
-
-
-""""
-with open("phase1.csv", "w", newline = "") as file :
-        csv.writer(file).writerow (["product_page_url", "universal_ product_code (upc)","title","price_including_tax","price_excluding_tax","number_available","product_description","category","review_rating", "image_url"])
-        csv.writer(file).writerow([product_page_url, upc,title,price_including_tax,price_excluding_tax,number_available,product_description,category,review_rating, image_url])
-"""
 
 url_category = "https://books.toscrape.com/catalogue/category/books/fiction_10/index.html"
 
+"""
 def get_data_category(url_category) : 
     bookstoscrape = session.get(url_category)
     bookstoscrape.encoding = 'utf-8'
     soup = BeautifulSoup(bookstoscrape.text, "html.parser")
+    page_next = soup.select("ul.pager li a")[0]["href"]
     all_h3 = soup.find_all("h3")
-    for h3 in all_h3 :
-        urls = h3.find("a")["href"]
-        all_url= urljoin (url_category, urls)
-        print(all_url)
+    each_page = url_category
+    for each_page in range :
+        bookstoscrape_next_page = session.get(each_page)
+        bookstoscrape_next_page.encoding = 'utf-8'
+        soup_next_page = BeautifulSoup(bookstoscrape_next_page.text, "html.parser")
+        for h3 in all_h3 :
+            urls = h3.find("a")["href"]
+            all_url= urljoin (each_page, urls)
+            print(all_url)
+        each_page = urljoin(each_page,page_next)
 
 get_data_category(url_category)
+"""
+
+
+"""
+with open("phase1.csv", "w", newline = "") as file :
+    csv.writer(file).writerow (["product_page_url", "universal_ product_code (upc)","title","price_including_tax","price_excluding_tax","number_available","product_description","category","review_rating", "image_url"])
+    csv.writer(file).writerow([product_page_url, upc,title,price_including_tax,price_excluding_tax,number_available,product_description,category,review_rating, image_url])
+"""
+
+
+def get_data_category(url_category):
+    next_page_url = url_category
+
+    while next_page_url:
+        response = session.get(next_page_url)
+        response.encoding = 'utf-8'
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        all_h3 = soup.find_all("h3")
+        for h3 in all_h3:
+            url_relatif = h3.find("a")["href"]
+            url_entier = urljoin(next_page_url, url_relatif)
+            get_data_book(url_entier)
+
+        next_button = soup.select_one("li.next a")
+        if next_button:
+            next_href = next_button["href"]
+            next_page_url = urljoin(next_page_url, next_href)
+        else:
+            break
+
+get_data_category(url_category)
+
