@@ -38,10 +38,24 @@ def get_data_book(url) :
     image_url_relative = image_url_div.find("img")["src"]
     image_url = urljoin("https://books.toscrape.com/",image_url_relative)
 
-    with open("phase1.csv", "w", newline = "") as file :
+
+
+""""
+with open("phase1.csv", "w", newline = "") as file :
         csv.writer(file).writerow (["product_page_url", "universal_ product_code (upc)","title","price_including_tax","price_excluding_tax","number_available","product_description","category","review_rating", "image_url"])
         csv.writer(file).writerow([product_page_url, upc,title,price_including_tax,price_excluding_tax,number_available,product_description,category,review_rating, image_url])
- 
+"""
 
-url = "https://books.toscrape.com/catalogue/sapiens-a-brief-history-of-humankind_996/index.html"
-get_data_book(url)
+url_category = "https://books.toscrape.com/catalogue/category/books/fiction_10/index.html"
+
+def get_data_category(url_category) : 
+    bookstoscrape = session.get(url_category)
+    bookstoscrape.encoding = 'utf-8'
+    soup = BeautifulSoup(bookstoscrape.text, "html.parser")
+    all_h3 = soup.find_all("h3")
+    for h3 in all_h3 :
+        urls = h3.find("a")["href"]
+        all_url= urljoin (url_category, urls)
+        print(all_url)
+
+get_data_category(url_category)
