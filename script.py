@@ -53,10 +53,6 @@ def get_data_book(url) :
     "image_url": image_url }
     
 
-
-url_category = "https://books.toscrape.com/catalogue/category/books/fiction_10/index.html"
-
-
 def get_data_category(url_category):
 
     all_books_data = []
@@ -81,17 +77,21 @@ def get_data_category(url_category):
         else:
             break
 
-    return(all_books_data)
+    with open("phase2.csv", "w", newline="", encoding="utf-8") as phase2:
+        writer = csv.DictWriter(phase2, fieldnames=all_books_data[0].keys())
+        writer.writeheader()
+        writer.writerows(all_books_data)
+
+
+url_category = "https://books.toscrape.com/catalogue/category/books/fiction_10/index.html"
+get_data_category(url_category)
 
 
 
-all_book_data = get_data_category(url_category)
 
 
-with open("phase2.csv", "w", newline="", encoding="utf-8") as phase2:
-    writer = csv.DictWriter(phase2, fieldnames=all_book_data[0].keys())
-    writer.writeheader()
-    writer.writerows(all_book_data)
+
+
 
 
 
