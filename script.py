@@ -6,6 +6,9 @@ import csv
 session = requests.Session()
 
 def get_data_book(url) :
+    """
+    Cette fonction prend en paramètre un site web, en extrait
+    les informations suivantes et les stocks dans un dictionnaire """
     bookstoscrape = session.get(url)
     bookstoscrape.encoding = 'utf-8'
     soup = BeautifulSoup(bookstoscrape.text, "html.parser")
@@ -37,10 +40,62 @@ def get_data_book(url) :
     image_url_div = soup.find('div', attrs = {'class' : "item active"})
     image_url_relative = image_url_div.find("img")["src"]
     image_url = urljoin("https://books.toscrape.com/",image_url_relative)
+
+    return {"product_page_url": product_page_url,
+    "upc": upc,
+    "title": title,
+    "price_including_tax": price_including_tax,
+    "price_excluding_tax": price_excluding_tax,
+    "number_available": number_available,
+    "product_description": product_description,
+    "category": category,
+    "review_rating": review_rating,
+    "image_url": image_url }
     
 
 
 url_category = "https://books.toscrape.com/catalogue/category/books/fiction_10/index.html"
+
+
+def get_data_category(url_category):
+
+    all_books_data = []
+    next_page_url = url_category
+
+    while next_page_url:
+        response = session.get(next_page_url)
+        response.encoding = 'utf-8'
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        all_h3 = soup.find_all("h3")
+        for h3 in all_h3:
+            url_relatif = h3.find("a")["href"]
+            url_entier = urljoin(next_page_url, url_relatif)
+            book_data = get_data_book(url_entier)
+            all_books_data.append(book_data)
+
+        next_button = soup.select_one("li.next a")
+        if next_button:
+            next_href = next_button["href"]
+            next_page_url = urljoin(next_page_url, next_href)
+        else:
+            break
+
+    return(all_books_data)
+
+
+
+all_book_data = get_data_category(url_category)
+
+
+with open("phase2.csv", "w", newline="", encoding="utf-8") as phase2:
+    writer = csv.DictWriter(phase2, fieldnames=all_book_data[0].keys())
+    writer.writeheader()
+    writer.writerows(all_book_data)
+
+
+
+
 
 """
 def get_data_category(url_category) : 
@@ -64,33 +119,6 @@ get_data_category(url_category)
 """
 
 
-"""
-with open("phase1.csv", "w", newline = "") as file :
-    csv.writer(file).writerow (["product_page_url", "universal_ product_code (upc)","title","price_including_tax","price_excluding_tax","number_available","product_description","category","review_rating", "image_url"])
-    csv.writer(file).writerow([product_page_url, upc,title,price_including_tax,price_excluding_tax,number_available,product_description,category,review_rating, image_url])
-"""
 
 
-def get_data_category(url_category):
-    next_page_url = url_category
-
-    while next_page_url:
-        response = session.get(next_page_url)
-        response.encoding = 'utf-8'
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        all_h3 = soup.find_all("h3")
-        for h3 in all_h3:
-            url_relatif = h3.find("a")["href"]
-            url_entier = urljoin(next_page_url, url_relatif)
-            get_data_book(url_entier)
-
-        next_button = soup.select_one("li.next a")
-        if next_button:
-            next_href = next_button["href"]
-            next_page_url = urljoin(next_page_url, next_href)
-        else:
-            break
-
-get_data_category(url_category)
 
