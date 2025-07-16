@@ -5,15 +5,17 @@ import csv
 
 session = requests.Session()
 
-def get_data_book(url) :
+def get_data_book(url_book) :
     """
     Cette fonction prend en paramètre un site web, en extrait
     les informations suivantes et les stocks dans un dictionnaire """
-    bookstoscrape = session.get(url)
-    bookstoscrape.encoding = 'utf-8'
-    soup = BeautifulSoup(bookstoscrape.text, "html.parser")
 
-    product_page_url = url
+
+    response = session.get(url_book)
+    response.encoding = 'utf-8'
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    product_page_url = url_book
     upc_th = soup.find('th', string ='UPC')
     upc = upc_th.find_next_sibling('td').text
 
@@ -28,8 +30,13 @@ def get_data_book(url) :
     number_available_th = soup.find('th', string = "Availability")
     number_available = number_available_th.find_next_sibling('td').text
 
-    product_description_h2= soup.find(id = 'product_description')
-    product_description = product_description_h2.find_next_sibling('p').text
+  
+    product_description_h2 = soup.find(id='product_description')
+    if product_description_h2:
+        product_description = product_description_h2.find_next_sibling('p').text
+    
+    else:
+        product_description = "Pas de description"
 
     category = soup.select("ul.breadcrumb li a")[2].text
 
@@ -51,10 +58,13 @@ def get_data_book(url) :
     "category": category,
     "review_rating": review_rating,
     "image_url": image_url }
-    
+
+
 
 def get_data_category(url_category):
-
+    """Récupère les données de tous les livres d’une catégorie
+    et les enregistre dans un fichier CSV nommé selon la catégorie.
+    """"
     all_books_data = []
     next_page_url = url_category
 
@@ -77,21 +87,32 @@ def get_data_category(url_category):
         else:
             break
 
-    with open("phase2.csv", "w", newline="", encoding="utf-8") as phase2:
+
+    category_nom = soup.select_one("ul.breadcrumb li.active").text.strip()
+    nom_fichier = category_nom + ".csv"
+
+    with open(nom_fichier, "w", newline="", encoding="utf-8") as phase2:
         writer = csv.DictWriter(phase2, fieldnames=all_books_data[0].keys())
         writer.writeheader()
         writer.writerows(all_books_data)
 
 
-url_category = "https://books.toscrape.com/catalogue/category/books/fiction_10/index.html"
-get_data_category(url_category)
+def get_data_website(url):
+    response = session.get(url)
+    response.encoding = 'utf-8'
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Trouve toutes les catégories dans la sidebar
+    category_links = soup.select("div.side_categories ul li ul li a")
+
+    for link in category_links:
+        href = link["href"]
+        url_category = urljoin(url, href)
+        get_data_category(url_category)
 
 
-
-
-
-
-
+url = "https://books.toscrape.com/index.html"
+get_data_website(url)
 
 
 
