@@ -9,31 +9,31 @@ import re
 
 session = requests.Session()
 def get_soup(url):
-    """Retourne un objet BeautifulSoup à partir du contenu HTML de l'URL donnée."""
+    """Returns a BeautifulSoup object from the HTML content of the given URL."""
     response = session.get(url)
     response.encoding = 'utf-8'
     return BeautifulSoup(response.text, "html.parser")
 
 
-def nettoyer_nom_fichier(titre):
-    """Nettoie un titre pour en faire un nom de fichier image valide."""
-    titre_nettoye = re.sub(r'[^\w\-_\. ]', '_', titre.strip())  # remplace caractères spéciaux et supprime les espaces, /n, etc
-    return titre_nettoye + ".jpg"
+def clean_file_name(title):
+    """Cleans a title to make it a valid image file name."""
+    clean_title = re.sub(r'[^\w\-_\. ]', '_', title.strip())  # replaces specials characters and removes spaces, /n, etc
+    return clean_title + ".jpg"
 
-def nettoyer_nom_dossier(nom):
-    """Nettoie un nom de dossier en remplaçant les caractères spéciaux."""
-    return re.sub(r'[^\w\-\_\.\ ]', '_', nom.strip())
+def clean_folder_name(name):
+    """Cleans a folder name to make it a valid folder name"""
+    return re.sub(r'[^\w\-\_\.\ ]', '_', name.strip())
 
 
 def get_data_book(url_book) :
-    """Récupère les informations d'un livre et télécharge son image.
-
-    Retourne un dictionnaire contenant les données extraites.
+    """Retrieves a book's information and downloads its image.
+    
+    Returns a dictionary containing the extracted data.
     """
 
     soup = get_soup(url_book)
 
-    #Extrait et stock chaque informations dans une variable
+    #Extracts and stores each information in a variable.
     product_page_url = url_book
     upc_th = soup.find('th', string ='UPC')
     upc = upc_th.find_next_sibling('td').text
@@ -53,27 +53,28 @@ def get_data_book(url_book) :
     if product_description_h2:
         product_description = product_description_h2.find_next_sibling('p').text
     else:
-        product_description = "Pas de description"
+        product_description = "No description"
 
     category = soup.select("ul.breadcrumb li a")[2].text
 
     review_rating_before = soup.find("p", attrs = {'class': "instock availability"})
-    review_rating_liste = review_rating_before.find_next_sibling("p")["class"]
-    review_rating = "Star rating : " + review_rating_liste[1] + " out of Five."
+    review_rating_list = review_rating_before.find_next_sibling("p")["class"]
+    review_rating = "Star rating : " + review_rating_list[1] + " out of Five."
 
     image_url_div = soup.find('div', attrs = {'class' : "item active"})
     image_url_relative = image_url_div.find("img")["src"]
     image_url = urljoin("https://books.toscrape.com/",image_url_relative)
 
 
-    # Créer le dossier de la catégorie et enregistrer l'image
-    (Path("images") / nettoyer_nom_dossier(category)).mkdir(parents=True, exist_ok=True)
-    nom_dossier = nettoyer_nom_dossier(category)
-    nom_fichier = nettoyer_nom_fichier(title)
-    chemin_complet = Path("images") / nom_dossier / nom_fichier 
+    # Create the category folder where to save the image
+    (Path("images") / clean_folder_name(category)).mkdir(parents=True, exist_ok=True)
+    folder_name = clean_folder_name(category)
+    file_name = clean_file_name(title)
+    full_path = Path("images") / folder_name / file_name 
 
+    # Save the image
     response = requests.get(image_url)
-    with open(chemin_complet, "wb") as f:
+    with open(full_path, "wb") as f:
         f.write(response.content)
 
     return {"product_page_url": product_page_url,
@@ -88,7 +89,7 @@ def get_data_book(url_book) :
     "image_url": image_url }
 
 def get_data_category(url_category):
-    """Récupère les données de tous les livres d’une catégorie et les enregistre dans un fichier CSV."""
+    """Retrieves data from all the books in a category and saves it to a .csv file """
     all_books_data = []
     next_page_url = url_category
 
@@ -98,9 +99,9 @@ def get_data_category(url_category):
 
         all_h3 = soup.find_all("h3")
         for h3 in all_h3:
-            url_relatif = h3.find("a")["href"]
-            url_entier = urljoin(next_page_url, url_relatif)
-            book_data = get_data_book(url_entier)
+            relative_url = h3.find("a")["href"]
+            full_url = urljoin(next_page_url, relative_url)
+            book_data = get_data_book(full_url)
             all_books_data.append(book_data)
 
         next_button = soup.select_one("li.next a")
@@ -110,20 +111,20 @@ def get_data_category(url_category):
         else:
             break
 
-    category_nom = soup.select_one("ul.breadcrumb li.active").text.strip()
-    nom_fichier = category_nom + ".csv"
+    category_name = soup.select_one("ul.breadcrumb li.active").text.strip()
+    file_name = category_name + ".csv"
 
-    with open(nom_fichier, "w", newline="", encoding="utf-8") as phase2:
-        writer = csv.DictWriter(phase2, fieldnames=all_books_data[0].keys())
+    with open(file_name, "w", newline="", encoding="utf-8") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=all_books_data[0].keys())
         writer.writeheader()
         writer.writerows(all_books_data)
 
 
 def get_data_website(url):
-    """Scrape toutes les catégories du site et enregistre les données de chaque livre."""
+    """Scrapes all the categories from the website and saves the data of each book."""
     soup = get_soup(url)
     if soup is None:
-        print("Impossible de récupérer la page d'accueil.")
+        print("Unable to retrieve the homepage.")
         return
     
     Path("images").mkdir(parents=True, exist_ok=True)
@@ -141,5 +142,5 @@ if __name__ == "__main__":
         url = "https://books.toscrape.com/index.html"
         get_data_website(url)
     except Exception as e:
-        print("Le script a échoué.")
-        print(f"Erreur : {e}")
+        print("The script has failed.")
+        print(f"Error : {e}")
