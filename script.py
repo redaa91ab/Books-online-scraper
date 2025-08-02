@@ -5,15 +5,14 @@ import csv
 from pathlib import Path
 import re
 
-
-
 session = requests.Session()
 def get_soup(url):
     """Returns a BeautifulSoup object from the HTML content of the given URL."""
     response = session.get(url)
+    if not response.ok:
+        print(f"une erreur est survenue avec l'url {url}")
     response.encoding = 'utf-8'
     return BeautifulSoup(response.text, "html.parser")
-
 
 def clean_file_name(title):
     """Cleans a title to make it a valid image file name."""
@@ -25,6 +24,7 @@ def clean_folder_name(name):
     return re.sub(r'[^\w\-\_\.\ ]', '_', name.strip())
 
 
+
 def get_data_book(url_book) :
     """Retrieves a book's information and downloads its image.
     
@@ -32,6 +32,9 @@ def get_data_book(url_book) :
     """
 
     soup = get_soup(url_book)
+    if soup is None:
+        print(f"Failed to retrieve book page: {url_book}")
+        return None
 
     #Extracts and stores each information in a variable.
     product_page_url = url_book
@@ -42,9 +45,12 @@ def get_data_book(url_book) :
 
     price_including_tax_th = soup.find('th', string = 'Price (incl. tax)')
     price_including_tax = price_including_tax_th.find_next_sibling('td').text
+    price_including_tax = float(''.join(c for c in price_including_tax if c in '0123456789.') or '0.00')
 
     price_excluding_tax_th = soup.find('th', string = 'Price (excl. tax)')
     price_excluding_tax = price_excluding_tax_th.find_next_sibling('td').text
+    price_excluding_tax = float(''.join(c for c in price_excluding_tax if c in '0123456789.') or '0.00')
+
 
     number_available_th = soup.find('th', string = "Availability")
     number_available = number_available_th.find_next_sibling('td').text
@@ -80,22 +86,26 @@ def get_data_book(url_book) :
     return {"product_page_url": product_page_url,
     "upc": upc,
     "title": title,
-    "price_including_tax": price_including_tax,
-    "price_excluding_tax": price_excluding_tax,
+    "price_including_tax": f"£{price_including_tax}", 
+    "price_excluding_tax": f"£{price_excluding_tax}",
     "number_available": number_available,
     "product_description": product_description,
     "category": category,
     "review_rating": review_rating,
-    "image_url": image_url }
+    "image_url": image_url
+    }
 
 def get_data_category(url_category):
     """Retrieves data from all the books in a category and saves it to a .csv file """
     all_books_data = []
     next_page_url = url_category
 
+
     while next_page_url:
         soup = get_soup(next_page_url)
-
+        if soup is None:
+            print(f"Failed to retrieve category page: {next_page_url}")
+            return None
 
         all_h3 = soup.find_all("h3")
         for h3 in all_h3:
@@ -122,19 +132,27 @@ def get_data_category(url_category):
 
 def get_data_website(url):
     """Scrapes all the categories from the website and saves the data of each book."""
+
     soup = get_soup(url)
     if soup is None:
         print("Unable to retrieve the homepage.")
         return
     
+
     Path("images").mkdir(parents=True, exist_ok=True)
 
     category_links = soup.select("div.side_categories ul li ul li a")
-
+    total_category = len(category_links)
+    category_counter = 0
+    print(f"{category_counter}/{total_category} categories scraped !")
+    
     for link in category_links:
+        category_counter += 1
         href = link["href"]
         url_category = urljoin(url, href)
         get_data_category(url_category)
+        print(f"{category_counter}/{total_category} categories scraped !")
+
 
 
 if __name__ == "__main__":
