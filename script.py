@@ -24,7 +24,6 @@ def clean_folder_name(name):
     return re.sub(r'[^\w\-\_\.\ ]', '_', name.strip())
 
 
-
 def get_data_book(url_book) :
     """Retrieves a book's information and downloads its image.
     

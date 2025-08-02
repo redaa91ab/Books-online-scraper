@@ -1,7 +1,5 @@
 .venv/ 
-*.csv 
-__pycache__/ 
-etapes/
-script_test.py
-desktop.ini
+*.csv
 images/
+__pycache__/ 
+desktop.ini
