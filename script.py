@@ -52,7 +52,8 @@ def get_data_book(url_book) :
 
 
     number_available_th = soup.find('th', string = "Availability")
-    number_available = number_available_th.find_next_sibling('td').text
+    number_available_text = number_available_th.find_next_sibling('td').text
+    number_available = re.search(r'\((\d+) available\)', number_available_text).group(1)
 
     product_description_h2 = soup.find(id='product_description')
     if product_description_h2:
